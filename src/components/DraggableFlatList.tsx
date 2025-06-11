@@ -23,6 +23,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   withSpring,
+  useDerivedValue,
 } from "react-native-reanimated";
 import CellRendererComponent from "./CellRendererComponent";
 import { DEFAULT_PROPS } from "../constants";
@@ -272,6 +273,87 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
 
   const gestureDisabled = useSharedValue(false);
 
+  //#region NEW: @madebylo
+
+  const { outerScrollRef, outerScrollOffset } = props;
+
+  const fingerPositionDuringDragY = useSharedValue<number|null>(null);
+  const outerScrollState = useSharedValue(0);
+  const outerScrollViewTopY = useSharedValue(0);             // Top der Outer-ScrollView
+  const outerScrollViewBottomY = useSharedValue(0);          // Bottom der Outer-ScrollView
+
+  const OUTERSCROLLSPEED = 8; // Geschwindigkeit der Outer-ScrollView
+  const OUTERSCROLLTHRESHOLD = 60; // Höhe des Scroll-Bereichs in Pixeln
+
+  // Disable outer scroll view when dragging
+  useEffect(() => {
+    if (!outerScrollRef?.current) return;
+    outerScrollRef?.current?.setNativeProps({ scrollEnabled: activeKey === null })
+  }, [activeKey])
+
+  // Measure the outer scroll view to get its top and bottom Y positions
+  useEffect(() => {
+    if (!outerScrollRef?.current || !outerScrollOffset) return;
+    outerScrollRef.current?.measureInWindow((x, y, w, h) => {
+        outerScrollViewTopY.value = y;
+        outerScrollViewBottomY.value = y + h;
+    });
+  }, [outerScrollRef]);
+
+  // scroll handler for the outer scroll view
+  const scrollOuter = (dir: number) => {
+    if (!outerScrollRef?.current || !outerScrollOffset) return;
+    const currentOffset = outerScrollOffset?.value || 0;
+    outerScrollRef.current.scrollTo({
+        y: Math.max(0, currentOffset + dir * OUTERSCROLLSPEED),
+        animated: false,
+    });
+  };
+
+  // Scroll-Loop
+  useEffect(() => {
+    if (!outerScrollRef?.current || !outerScrollOffset) return;
+    let rafId: number;
+
+    const loop = () => {
+        if (outerScrollState.value === 1) {
+            scrollOuter(-1); // hoch
+        } else if (outerScrollState.value === 2) {
+            scrollOuter(+1); // runter
+        }
+        rafId = requestAnimationFrame(loop);
+    };
+
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [scrollOuter]);
+
+  // Handle Outer-Scroll-Status
+  useDerivedValue(() => {
+    if (!outerScrollRef?.current || !outerScrollOffset) return;
+
+    if (fingerPositionDuringDragY === null) {
+        outerScrollState.value = 0;
+        return;
+    }
+
+    const y = fingerPositionDuringDragY.value; // Fallback to 0 if null
+    if (!y) {
+        outerScrollState.value = 0;
+        return;
+    }
+
+    if (y < outerScrollViewTopY.value + OUTERSCROLLTHRESHOLD) {
+        outerScrollState.value = 1;
+    } else if (y > outerScrollViewBottomY.value - OUTERSCROLLTHRESHOLD) {
+        outerScrollState.value = 2;
+    } else {
+        outerScrollState.value = 0;
+    }
+  });
+
+  //#endregion
+
   const panGesture = Gesture.Pan()
     .onBegin((evt) => {
       gestureDisabled.value = disabled.value;
@@ -285,8 +367,10 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
         ? evt.translationX
         : evt.translationY;
       touchTranslate.value = translation;
+      fingerPositionDuringDragY.value = evt.absoluteY //@madebylo
     })
     .onEnd((evt) => {
+      fingerPositionDuringDragY.value = null; //@madebylo
       if (gestureDisabled.value) return;
       // Set touch val to current translate val
       isTouchActiveNative.value = false;
@@ -320,6 +404,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     .onTouchesUp(() => {
       // Turning this into a worklet causes timing issues. We want it to run
       // just after the finger lifts.
+      fingerPositionDuringDragY.value = null //@madebylo
       runOnJS(onContainerTouchEnd)();
     });
 
