@@ -6,7 +6,8 @@ import {
   ViewStyle,
 } from "react-native";
 import { useAnimatedValues } from "./context/animatedValueContext";
-import { FlatList } from "react-native-gesture-handler";
+/* ▼ NEU: ScrollView zusätzlich importieren */
+import { FlatList, ScrollView } from "react-native-gesture-handler";
 import Animated, {
   AnimateProps,
   WithSpringConfig,
@@ -43,6 +44,7 @@ export type DraggableFlatListProps<T> = Modify<
     renderPlaceholder?: RenderPlaceholder<T>;
     simultaneousHandlers?: React.Ref<any> | React.Ref<any>[];
     outerScrollOffset?: Animated.SharedValue<number>;
+    outerScrollRef?: React.RefObject<Animated.ScrollView>; // @madebylo
     onAnimValInit?: (animVals: ReturnType<typeof useAnimatedValues>) => void;
     itemEnteringAnimation?: AnimateProps<Animated.View>["entering"];
     itemExitingAnimation?: AnimateProps<Animated.View>["exiting"];
