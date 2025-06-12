@@ -283,6 +283,13 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     autoscrollSpeed     = DEFAULT_PROPS.autoscrollSpeed,
   } = props;
 
+  const propsForFlatList = { ...props };
+  delete propsForFlatList.outerScrollRef;
+  delete propsForFlatList.outerScrollOffset;
+  delete propsForFlatList.autoscrollThreshold;
+  delete propsForFlatList.autoscrollSpeed;
+  
+
   const pointerPositionDuringDragY = useSharedValue<number | null>(null);
   const pointerType                = useSharedValue(0) // 0 = TOUCH, 1 = STYLUS, 2 = MOUSE, 3 = KEY, 4  OTHER
   const outerScrollState           = useSharedValue<0 | 1 | 2>(0);   // 0 idle, 1 up, 2 down
@@ -492,7 +499,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
             <PlaceholderItem renderPlaceholder={props.renderPlaceholder} />
           )}
           <AnimatedFlatList
-            {...props}
+            {...propsForFlatList} //@madebylo
             data={props.data}
             onViewableItemsChanged={onViewableItemsChanged}
             CellRendererComponent={CellRendererComponent}
