@@ -303,15 +303,28 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
   useEffect(() => {
     const node = outerScrollRef?.current;
     if (!node || pointerType.value == 2) return;
-
+  
     if (isWeb) {
-      const el = node as HTMLElement;
+      // @ts-ignore – wir wissen, dass es im Web ein HTMLElement ist
+      const el = node;
+  
+      // @ts-ignore – TypeScript kennt `style` auf node nicht sicher
       if (!el?.style) return;
+  
+      // @ts-ignore – wir greifen gezielt auf style zu
       const prevOverflow = el.style.overflowY;
-      el.style.overflowY        = activeKey == null ? "auto"   : "hidden";
+  
+      // @ts-ignore
+      el.style.overflowY = activeKey == null ? "auto" : "hidden";
+  
+      // @ts-ignore
       el.style.overscrollBehavior = activeKey == null ? "auto" : "contain";
+  
       return () => {
-        el.style.overflowY        = prevOverflow;
+        // @ts-ignore
+        el.style.overflowY = prevOverflow;
+  
+        // @ts-ignore
         el.style.overscrollBehavior = "auto";
       };
     } else {
