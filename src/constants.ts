@@ -17,12 +17,12 @@ export const DEFAULT_ANIMATION_CONFIG: WithSpringConfig = {
 };
 
 export const DEFAULT_PROPS = {
-  autoscrollThreshold: 30,
-  autoscrollSpeed: 100,
+  autoscrollThreshold: 60, //@madebylo
+  autoscrollSpeed: 20, //@madebylo
   animationConfig: DEFAULT_ANIMATION_CONFIG,
   scrollEnabled: true,
   dragHitSlop: 0 as PanGestureHandlerProperties["hitSlop"],
-  activationDistance: 0,
+  activationDistance: 20, //@madebylo
   dragItemOverflow: false,
 };
 
