@@ -22,7 +22,7 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps   # reproduzierbarer als npm install
+        run: npm install --legacy-peer-deps   # reproduzierbarer als npm install
 
       - name: Build
         run: npm run build               # erzeugt lib/
