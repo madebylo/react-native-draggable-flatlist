@@ -80,7 +80,7 @@
           "configFile": "./babel.config.js"
         }
       ],
-      "module",
+      "module"
     ]
   },
   "dependencies": {
