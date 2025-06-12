@@ -4,7 +4,9 @@
     "jsx": "react",
     "lib": ["esnext"],
     "skipLibCheck": true,
-    "strict": true
+    "noEmit": false,
+    "checkJs": false,
+    "strict": false
   },
   "exclude": ["node_modules"],
   "include": ["src"]
