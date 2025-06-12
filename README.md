@@ -17,7 +17,7 @@ with `npm`:
 npm install --save react-native-draggable-flatlist
 ```
 
-with `yarn`:
+with `yarn`: 
 
 ```
 yarn add react-native-draggable-flatlist
