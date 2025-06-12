@@ -303,27 +303,27 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
   useEffect(() => {
     const node = outerScrollRef?.current;
     if (!node || pointerType.value == 2) return;
-  
+
     if (isWeb) {
-      // @ts-ignore – wir wissen, dass es im Web ein HTMLElement ist
+      // @ts-ignore – we know that node is an HTMLElement
       const el = node;
-  
-      // @ts-ignore – TypeScript kennt `style` auf node nicht sicher
+
+      // @ts-ignore – TypeScript does not know that el is an HTMLElement
       if (!el?.style) return;
-  
-      // @ts-ignore – wir greifen gezielt auf style zu
+
+      // @ts-ignore – we know that el is an HTMLElement
       const prevOverflow = el.style.overflowY;
-  
+
       // @ts-ignore
       el.style.overflowY = activeKey == null ? "auto" : "hidden";
-  
+
       // @ts-ignore
       el.style.overscrollBehavior = activeKey == null ? "auto" : "contain";
-  
+
       return () => {
         // @ts-ignore
         el.style.overflowY = prevOverflow;
-  
+
         // @ts-ignore
         el.style.overscrollBehavior = "auto";
       };
@@ -335,6 +335,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
 
   //measure the outer scroll view
   useEffect(() => {
+    // @ts-ignore – outerScrollRef is a ref to a ScrollView
     outerScrollRef?.current?.measureInWindow((_, y, __, h) => {
       outerScrollViewTopY.value  = y;
       outerScrollViewBottomY.value = y + h;
@@ -373,6 +374,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     attemptedOffset.value = outerScrollOffset.value + delta;
     lastDir.value         = dir as 1 | -1;
 
+    // @ts-ignore
     scrollTo(outerScrollRef, 0, attemptedOffset.value, false); // UI-Thread
   });
   
@@ -456,8 +458,10 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
   if (activationDistanceProp) {
     const activeOffset = [-activationDistanceProp, activationDistanceProp];
     if (props.horizontal) {
+      //@ts-ignore
       panGesture.activeOffsetX(activeOffset);
     } else {
+      //@ts-ignore
       panGesture.activeOffsetY(activeOffset);
     }
   }
