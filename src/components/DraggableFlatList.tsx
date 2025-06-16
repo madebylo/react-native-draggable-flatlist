@@ -23,8 +23,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   withSpring,
-  useDerivedValue, //@madebylo
-  scrollTo, //@madebylo
+  useAnimatedRef, //@madebylo
 } from "react-native-reanimated";
 import CellRendererComponent from "./CellRendererComponent";
 import { DEFAULT_PROPS, isWeb } from "../constants"; //@madebylo
@@ -62,7 +61,6 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
   const {
     cellDataRef,
     containerRef,
-    flatlistRef,
     keyToIndexRef,
     propsRef,
     animationConfigRef,
@@ -85,6 +83,8 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     viewableIndexMax,
     disabled,
   } = useAnimatedValues();
+
+  const flatlistAnimatedRef = useAnimatedRef<FlatList<any>>(); //@madebylo
 
   const reset = useStableCallback(() => {
     activeIndexAnim.value = -1;
@@ -274,114 +274,9 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
 
   const gestureDisabled = useSharedValue(false);
 
-//#region @madebylo
+  const pointerY = useSharedValue<number | null>(null); //@madebylo
+  const pointerType = useSharedValue(0); // 0 = TOUCH, 1 = STYLUS, 2 = MOUSE, 3 = KEY, 4  OTHER //@madebylo
 
-  const {
-    outerScrollRef,
-    outerScrollOffset,
-    autoscrollThreshold = DEFAULT_PROPS.autoscrollThreshold,
-    autoscrollSpeed     = DEFAULT_PROPS.autoscrollSpeed,
-  } = props;
-
-  const propsForFlatList = { ...props };
-  delete propsForFlatList.outerScrollRef;
-  delete propsForFlatList.outerScrollOffset;
-  delete propsForFlatList.autoscrollThreshold;
-  delete propsForFlatList.autoscrollSpeed;
-  
-
-  const pointerPositionDuringDragY = useSharedValue<number | null>(null);
-  const pointerType                = useSharedValue(0) // 0 = TOUCH, 1 = STYLUS, 2 = MOUSE, 3 = KEY, 4  OTHER
-  const outerScrollState           = useSharedValue<0 | 1 | 2>(0);   // 0 idle, 1 up, 2 down
-  const outerScrollViewTopY        = useSharedValue(0);
-  const outerScrollViewBottomY     = useSharedValue(0);
-  const attemptedOffset            = useSharedValue(0);              // wohin wir scrollen wollen
-  const lastDir                    = useSharedValue<0 | 1 | -1>(0);  // 1 ↓, -1 ↑
-
-
-  // lock the scroll of the outer scroll view
-  useEffect(() => {
-    const node = outerScrollRef?.current;
-    if (!node || pointerType.value == 2) return;
-
-    if (isWeb) {
-      const el = node as HTMLElement;
-      if (!el?.style) return;
-      const prevOverflow = el.style.overflowY;
-      el.style.overflowY        = activeKey == null ? "auto"   : "hidden";
-      el.style.overscrollBehavior = activeKey == null ? "auto" : "contain";
-      return () => {
-        el.style.overflowY        = prevOverflow;
-        el.style.overscrollBehavior = "auto";
-      };
-    } else {
-      node.setNativeProps({ scrollEnabled: activeKey == null });
-    }
-  }, [activeKey, isWeb, outerScrollRef]);
-  
-
-  //measure the outer scroll view
-  useEffect(() => {
-    outerScrollRef?.current?.measureInWindow((_, y, __, h) => {
-      outerScrollViewTopY.value  = y;
-      outerScrollViewBottomY.value = y + h;
-    });
-  }, [pointerType]);
-
-
-  // check if the pointer is within the autoscroll threshold
-  useDerivedValue(() => {
-    const y = pointerPositionDuringDragY.value;
-    if (y == null || activeKey == null) { outerScrollState.value = 0; return; }
-
-    if (y < outerScrollViewTopY.value + autoscrollThreshold)
-        outerScrollState.value = 1;           // up
-    else if (y > outerScrollViewBottomY.value - autoscrollThreshold)
-        outerScrollState.value = 2;           // down
-    else outerScrollState.value = 0;           // none
-  });
-
-
-  // scroll the outer scroll view if the pointer is within the autoscroll threshold
-  useDerivedValue(() => {
-
-    if (outerScrollState.value === 0 || outerScrollRef == null || outerScrollOffset?.value == null  || activeKey == null) return;
-
-    const distFromEdge = outerScrollState.value === 1
-      ? pointerPositionDuringDragY.value! - outerScrollViewTopY.value
-      : outerScrollViewBottomY.value - pointerPositionDuringDragY.value!;
-
-    const speedPct = 1 - distFromEdge / autoscrollThreshold;
-    if (speedPct <= 0) return;
-
-    const dir   = outerScrollState.value === 1 ? -1 : 1;
-    const delta = speedPct * autoscrollSpeed * dir;
-
-    attemptedOffset.value = outerScrollOffset.value + delta;
-    lastDir.value         = dir as 1 | -1;
-
-    scrollTo(outerScrollRef, 0, attemptedOffset.value, false); // UI-Thread
-  });
-  
-
-  // check if the outer scroll view has reached the limit
-  if (outerScrollOffset) {
-    useAnimatedReaction(
-      () => outerScrollOffset.value,
-      (real, prev) => {
-        if (outerScrollState.value === 0 || prev == null) return;
-
-        const dir          = lastDir.value;
-        const movedInDir   = dir === 1 ? real > prev : real < prev;
-
-        if (!movedInDir) {
-          outerScrollState.value = 0;
-        }
-      }
-    );
-  }
-
-//#endregion
 
   const panGesture = Gesture.Pan()
     .onBegin((evt) => {
@@ -397,10 +292,10 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
         ? evt.translationX
         : evt.translationY;
       touchTranslate.value = translation;
-      pointerPositionDuringDragY.value = evt.absoluteY //@madebylo
+      pointerY.value = evt.absoluteY //@madebylo
     })
     .onEnd((evt) => {
-      pointerPositionDuringDragY.value = null; //@madebylo
+      pointerY.value = null; //@madebylo
       if (gestureDisabled.value) return;
       // Set touch val to current translate val
       isTouchActiveNative.value = false;
@@ -434,7 +329,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     .onTouchesUp(() => {
       // Turning this into a worklet causes timing issues. We want it to run
       // just after the finger lifts.
-      pointerPositionDuringDragY.value = null //@madebylo
+      pointerY.value = null //@madebylo
       runOnJS(onContainerTouchEnd)();
     });
 
@@ -443,8 +338,10 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
   if (activationDistanceProp) {
     const activeOffset = [-activationDistanceProp, activationDistanceProp];
     if (props.horizontal) {
+      //@ts-ignore
       panGesture.activeOffsetX(activeOffset);
     } else {
+      //@ts-ignore
       panGesture.activeOffsetY(activeOffset);
     }
   }
@@ -465,7 +362,14 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     [horizontalAnim]
   );
 
-  useAutoScroll();
+  useAutoScroll( // @madebylo
+   props.outerScrollRef,       // undefined ⇒ FlatList scrollt sich selbst
+   props.outerScrollOffset,    // SharedValue oder undefined
+   pointerY,                   // Zeiger-Y
+   activeKey,                  // für Lock/Unlock
+   pointerType,                // Maus-Erkennung
+    flatlistAnimatedRef,        // <- NEU: Referenz auf den FlatList-Ref
+  );
 
   const onViewableItemsChanged = useStableCallback<
     OnViewableItemsChangedCallback<T>
@@ -481,6 +385,12 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
     viewableIndexMax.value = max;
     props.onViewableItemsChanged?.(info);
   });
+
+  const propsForFlatList = { ...props } //@madebylo
+  delete propsForFlatList.outerScrollRef;
+  delete propsForFlatList.outerScrollOffset;
+  delete propsForFlatList.autoscrollThreshold;
+  delete propsForFlatList.autoscrollSpeed;
 
   return (
     <DraggableFlatListProvider
@@ -503,7 +413,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
             data={props.data}
             onViewableItemsChanged={onViewableItemsChanged}
             CellRendererComponent={CellRendererComponent}
-            ref={flatlistRef}
+            ref={flatlistAnimatedRef} //@madebylo
             onContentSizeChange={onListContentSizeChange}
             scrollEnabled={!activeKey && scrollEnabled}
             renderItem={renderItem}
