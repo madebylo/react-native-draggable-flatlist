@@ -64,8 +64,9 @@ type InnerProps<T> = {
   extraData?: any;
 };
 
-function Inner<T>({ renderItem, extraData, ...rest }: InnerProps<T>) {
-  return renderItem({ ...rest }) as JSX.Element;
+function Inner<T>({ renderItem, extraData, getIndex, ...rest }: InnerProps<T>) {
+  const index = getIndex!()!;
+  return renderItem({ ...rest, index }) as JSX.Element;
 }
 
 const MemoizedInner = typedMemo(Inner);
